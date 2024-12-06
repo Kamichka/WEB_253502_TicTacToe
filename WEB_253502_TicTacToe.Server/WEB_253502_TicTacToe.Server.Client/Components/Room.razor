@@ -1,0 +1,94 @@
+﻿@using WEB_253502_TicTacToe.Shared;
+@using Microsoft.AspNetCore.Components;
+@using WEB_253502_TicTacToe.Server.Client.Services.RoomService;
+@using WEB_253502_TicTacToe.Server.Client.Services.WelcomeService;
+@inject IRoomService roomService
+
+@if (CurrentRoom is not null)
+{
+    <div class="game-info">
+        <h3 class="text-2xl font-bold py-2 text-center">@CurrentRoom.RoomName</h3>
+
+        @if (CurrentRoom.PlayerList.Count < 2)
+        {
+            <h4 class="text-center">Ожидаем второго игрока</h4>
+        }
+
+        @if (!CurrentRoom.Game.IsGameStarted && CurrentRoom.Game.PlayerXId != roomService._playerId &&
+       CurrentRoom.PlayerList.Count == 2)
+        {
+            <h4 class="text-center">Ожидаем второго игрока</h4>
+        }
+
+        @if (CurrentRoom.Game.IsGameOver && !CurrentRoom.Game.IsDraw)
+        {
+            <h4 class="text-center text-green-500">Игра окончена! Победили @CurrentRoom.Game.Winner</h4>
+        }
+
+        @if (CurrentRoom.Game.IsGameOver && CurrentRoom.Game.IsDraw)
+        {
+            <h4 class="text-center text-yellow-500">Боевая ничья!</h4>
+        }
+
+        @if ((!CurrentRoom.Game.IsGameStarted )
+       && CurrentRoom.Game.PlayerXId == roomService._playerId
+            && CurrentRoom.PlayerList.Count == 2)
+        {
+            <div class="start-button">
+                <button @onclick="@StartGame" class="btn btn-primary">Начать игру</button>
+            </div>
+        }
+        @if (CurrentRoom.Game.IsGameOver)
+        {
+            <div class="start-button">
+                <button @onclick="@StartGame" class="btn btn-primary">Играть еще</button>
+            </div>
+        }
+
+    </div>
+
+    @if (CurrentRoom.Game.IsGameStarted)
+    {
+        <div class="game-board-info text-center">
+            <h4>Сейчас ходят @CurrentRoom.Game.CurrentPlayerSymbol.</h4>
+            <span>Игроки: @CurrentRoom.PlayerList[0].Name (X), @CurrentRoom.PlayerList[1].Name (O)</span>
+        </div>
+
+        <GameBoard Board="@CurrentRoom.Game.BoardList"
+                   BoardSize="5"
+                   OnCellClickCallback="HandleCellClick" />
+        
+
+        @if (!roomService.IsMyTurn() && !CurrentRoom.Game.IsGameOver)
+        {
+            <p class="waiting-text text-center">Ожидайте хода другого игрока.</p>
+        }
+    }
+}
+@code {
+    [Parameter]
+    public GameRoom? CurrentRoom { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        roomService.SetInvokeAsync(InvokeAsync); // Передаем делегат InvokeAsync в сервис
+        roomService.OnGameUpdated += async () => await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleCellClick((int Row, int Col) cell)
+    {
+        if (roomService != null)
+        {
+            await roomService.MakeMoveAsync(cell.Row, cell.Col);
+        }
+    }
+
+    private async Task StartGame()
+    {
+        if (roomService != null)
+        {
+            await roomService.StartGameAsync(CurrentRoom);
+        }
+    }
+
+}

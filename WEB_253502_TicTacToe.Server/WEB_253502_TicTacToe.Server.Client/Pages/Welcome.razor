@@ -1,0 +1,94 @@
+﻿@page "/"
+@using WEB_253502_TicTacToe.Server.Client.Components
+@inject WEB_253502_TicTacToe.Server.Client.Services.WelcomeService.IWelcomeService welcomeService
+@rendermode @(new InteractiveWebAssemblyRenderMode(false))
+
+<h3 class="text-4xl font-bold py-4 text-center">Игра крестики-нолики</h3>
+
+@if(welcomeService.CurrentRoom is null)
+{
+    <div class="center-container">
+        <input @bind="@_playerName" placeholder="Ваше имя" class="rounded-md my-2 p-2 text-black" />
+
+        @if (string.IsNullOrWhiteSpace(_playerName))
+        {
+            <p class="text-red-500">Пожалуйста, введите имя игрока.</p>
+        }
+
+        <h3 class="mt-4">Выберите комнату</h3>
+        <select @onchange="OnRoomSelected" class="rounded-md my-2 p-2 text-black">
+            <option value="">--Выберите комнату--</option>
+            @foreach (var room in welcomeService.Rooms)
+            {
+                <option value="@room.RoomId">@room.RoomName</option>
+            }
+        </select>
+
+        <p class="mt-4">Или создайте новую комнату и присоединитесь к ней</p>
+
+        <input @bind="@_currentRoomName" placeholder="Имя комнаты" class="rounded-md my-2 p-2 text-black" />
+
+        @if (string.IsNullOrWhiteSpace(_currentRoomName))
+        {
+            <p class="text-red-500">Пожалуйста, введите имя комнаты.</p>
+        }
+
+        <button @onclick="@CreateRoom" class="rounded-md my-2 p-2 text-black">Создать комнату</button>
+    </div>
+
+    
+}
+else
+{
+    <CascadingValue Value="welcomeService._hubConnection">
+        <Room CurrentRoom="welcomeService.CurrentRoom" />
+    </CascadingValue>
+}
+
+@code {
+    private string _playerName = string.Empty;
+    private string _currentRoomName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+         welcomeService.SetInvokeAsync(InvokeAsync); // Передаем делегат InvokeAsync в сервис
+         await welcomeService.InitializeAsync();
+         welcomeService.OnRoomsUpdated += async () => await InvokeAsync(StateHasChanged);
+         welcomeService.OnGameUpdated += async () => await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task CreateRoom()
+    {
+        if (string.IsNullOrWhiteSpace(_currentRoomName))
+        {
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_playerName))
+        {
+            return;
+        }
+
+        await welcomeService.CreateRoomAsync(_currentRoomName, _playerName);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task JoinRoom(string roomId)
+    {
+        if (string.IsNullOrWhiteSpace(_playerName))
+        {
+            return;
+        }
+        await welcomeService.JoinRoomAsync(roomId, _playerName);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnRoomSelected(ChangeEventArgs e)
+    {
+        var selectedRoomId = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(selectedRoomId))
+        {
+            await JoinRoom(selectedRoomId);
+        }
+    }
+}
