@@ -9,57 +9,56 @@
     <div class="game-info">
         <h3 class="text-2xl font-bold py-2 text-center">@CurrentRoom.RoomName</h3>
 
-        @if (CurrentRoom.PlayerList.Count < 2)
+        @if (CurrentRoom.PlayerList?.Count < 2)
         {
             <h4 class="text-center">Ожидаем второго игрока</h4>
         }
 
-        @if (!CurrentRoom.Game.IsGameStarted && CurrentRoom.Game.PlayerXId != roomService._playerId &&
-       CurrentRoom.PlayerList.Count == 2)
+        @if (CurrentRoom.Game?.IsGameStarted == false && CurrentRoom.Game.PlayerXId != roomService._playerId &&
+             CurrentRoom.PlayerList?.Count == 2)
         {
             <h4 class="text-center">Ожидаем второго игрока</h4>
         }
 
-        @if (CurrentRoom.Game.IsGameOver && !CurrentRoom.Game.IsDraw)
+        @if (CurrentRoom.Game?.IsGameOver == true && CurrentRoom.Game.IsDraw == false)
         {
             <h4 class="text-center text-green-500">Игра окончена! Победили @CurrentRoom.Game.Winner</h4>
         }
 
-        @if (CurrentRoom.Game.IsGameOver && CurrentRoom.Game.IsDraw)
+        @if (CurrentRoom.Game?.IsGameOver == true && CurrentRoom.Game.IsDraw == true)
         {
             <h4 class="text-center text-yellow-500">Боевая ничья!</h4>
         }
 
-        @if ((!CurrentRoom.Game.IsGameStarted )
-       && CurrentRoom.Game.PlayerXId == roomService._playerId
-            && CurrentRoom.PlayerList.Count == 2)
+        @if (CurrentRoom.Game?.IsGameStarted == false
+             && CurrentRoom.Game.PlayerXId == roomService._playerId
+             && CurrentRoom.PlayerList?.Count == 2)
         {
             <div class="start-button">
                 <button @onclick="@StartGame" class="btn btn-primary">Начать игру</button>
             </div>
         }
-        @if (CurrentRoom.Game.IsGameOver)
+
+        @if (CurrentRoom.Game?.IsGameOver == true)
         {
             <div class="start-button">
                 <button @onclick="@StartGame" class="btn btn-primary">Играть еще</button>
             </div>
         }
-
     </div>
 
-    @if (CurrentRoom.Game.IsGameStarted)
+    @if (CurrentRoom.Game?.IsGameStarted == true)
     {
         <div class="game-board-info text-center">
             <h4>Сейчас ходят @CurrentRoom.Game.CurrentPlayerSymbol.</h4>
-            <span>Игроки: @CurrentRoom.PlayerList[0].Name (X), @CurrentRoom.PlayerList[1].Name (O)</span>
+            <span>Игроки: @CurrentRoom.PlayerList?[0].Name (X), @CurrentRoom.PlayerList?[1].Name (O)</span>
         </div>
 
         <GameBoard Board="@CurrentRoom.Game.BoardList"
                    BoardSize="5"
                    OnCellClickCallback="HandleCellClick" />
-        
 
-        @if (!roomService.IsMyTurn() && !CurrentRoom.Game.IsGameOver)
+        @if (!roomService.IsMyTurn() && CurrentRoom.Game.IsGameOver == false)
         {
             <p class="waiting-text text-center">Ожидайте хода другого игрока.</p>
         }

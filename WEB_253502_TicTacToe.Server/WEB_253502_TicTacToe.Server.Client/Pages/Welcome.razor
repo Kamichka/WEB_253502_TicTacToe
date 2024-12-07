@@ -2,13 +2,13 @@
 @using WEB_253502_TicTacToe.Server.Client.Components
 @inject WEB_253502_TicTacToe.Server.Client.Services.WelcomeService.IWelcomeService welcomeService
 @rendermode @(new InteractiveWebAssemblyRenderMode(false))
-
+@inject ILogger<Welcome> Logger
 <h3 class="text-4xl font-bold py-4 text-center">Игра крестики-нолики</h3>
 
 @if(welcomeService.CurrentRoom is null)
 {
     <div class="center-container">
-        <input @bind="@_playerName" placeholder="Ваше имя" class="rounded-md my-2 p-2 text-black" />
+        <input @bind="_playerName" @oninput="OnNameChanged" placeholder="Ваше имя" class="rounded-md my-2 p-2 text-black" />
 
         @if (string.IsNullOrWhiteSpace(_playerName))
         {
@@ -26,23 +26,29 @@
 
         <p class="mt-4">Или создайте новую комнату и присоединитесь к ней</p>
 
-        <input @bind="@_currentRoomName" placeholder="Имя комнаты" class="rounded-md my-2 p-2 text-black" />
+        <input @bind="_currentRoomName" @oninput="OnNameChanged" placeholder="Имя комнаты" class="rounded-md my-2 p-2 text-black" />
 
         @if (string.IsNullOrWhiteSpace(_currentRoomName))
         {
             <p class="text-red-500">Пожалуйста, введите имя комнаты.</p>
         }
 
-        <button @onclick="@CreateRoom" class="rounded-md my-2 p-2 text-black">Создать комнату</button>
+        <button @onclick="CreateRoom" class="rounded-md my-2 p-2 text-black">Создать комнату</button>
     </div>
-
-    
 }
 else
 {
-    <CascadingValue Value="welcomeService._hubConnection">
-        <Room CurrentRoom="welcomeService.CurrentRoom" />
-    </CascadingValue>
+    @if (welcomeService.CurrentRoom is not null)
+    {
+        <CascadingValue Value="welcomeService._hubConnection">
+            <Room CurrentRoom="welcomeService.CurrentRoom" />
+        </CascadingValue>
+
+    }
+    else
+    {
+        <p>Комната еще не создана или не выбрана.</p>
+    }
 }
 
 @code {
@@ -61,13 +67,15 @@ else
     {
         if (string.IsNullOrWhiteSpace(_currentRoomName))
         {
+            Logger.LogWarning("Room name is required");
             return;
         }
         if (string.IsNullOrWhiteSpace(_playerName))
         {
+            Logger.LogWarning("Player name is required");
             return;
         }
-
+        Logger.LogInformation("Room created: {RoomName} by {PlayerName}", _currentRoomName, _playerName);
         await welcomeService.CreateRoomAsync(_currentRoomName, _playerName);
         await InvokeAsync(StateHasChanged);
     }
@@ -76,6 +84,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_playerName))
         {
+            Logger.LogWarning("Player name is required");
             return;
         }
         await welcomeService.JoinRoomAsync(roomId, _playerName);
@@ -90,5 +99,9 @@ else
         {
             await JoinRoom(selectedRoomId);
         }
+    }
+    private void OnNameChanged()
+    {
+        StateHasChanged(); 
     }
 }

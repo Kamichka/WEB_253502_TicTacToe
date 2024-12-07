@@ -7,12 +7,13 @@ namespace WEB_253502_TicTacToe.Server.Client.Services.RoomService
     public class RoomService:IRoomService
     {
         private readonly HubConnection _hubConnection;
+        private readonly ILogger<RoomService> _logger;
         public string? _playerId { get; set; }
         public GameRoom? CurrentRoom { get; private set; }
         public event Func<Task>? OnGameUpdated;
         private Func<Func<Task>, Task>? _invokeAsync;
 
-        public RoomService(HubConnection hubConnection)
+        public RoomService(HubConnection hubConnection, ILogger<RoomService> logger)
         {
             _hubConnection = hubConnection;
             _playerId = _hubConnection.ConnectionId;
@@ -34,6 +35,7 @@ namespace WEB_253502_TicTacToe.Server.Client.Services.RoomService
                     await _invokeAsync(() => OnGameUpdated.Invoke());
                 }
             });
+            _logger = logger;
         }
 
         public async Task InitializeAsync()
@@ -51,12 +53,14 @@ namespace WEB_253502_TicTacToe.Server.Client.Services.RoomService
         {
             if (CurrentRoom != null)
             {
-               await _hubConnection.InvokeAsync("StartGame", CurrentRoom.RoomId);
+                _logger.LogInformation("Game started");
+                await _hubConnection.InvokeAsync("StartGame", CurrentRoom.RoomId);
             }
         }
 
         public async Task MakeMoveAsync(int row, int col)
         {
+            _logger.LogInformation($"Move on row {row}, col {col}");
             if (IsMyTurn() && CanMove())
             {
                 await _hubConnection.InvokeAsync("MakeMove", CurrentRoom.RoomId, row, col, _playerId);
@@ -65,7 +69,14 @@ namespace WEB_253502_TicTacToe.Server.Client.Services.RoomService
 
         public bool IsMyTurn()
         {
-            return CurrentRoom != null && _playerId == CurrentRoom.Game.CurrentPlayerId;
+            if (CurrentRoom == null || CurrentRoom.Game == null)
+            {
+                _logger.LogWarning("IsMyTurn called but CurrentRoom or Game is null.");
+                return false;
+            }
+
+            _logger.LogInformation($"Checking turn: CurrentPlayer = {CurrentRoom.Game.CurrentPlayerId}, PlayerID = {_playerId}");
+            return _playerId == CurrentRoom.Game.CurrentPlayerId;
         }
 
         public bool CanMove()
